@@ -1099,6 +1099,8 @@ func (c *ClusterClient) _processPipeline(ctx context.Context, cmds []Cmder) erro
 }
 
 func (c *ClusterClient) mapCmdsByNode(cmdsMap *cmdsMap, cmds []Cmder) error {
+	var node *clusterNode
+	var err error
 	state, err := c.state.Get()
 	if err != nil {
 		return err
@@ -1106,10 +1108,12 @@ func (c *ClusterClient) mapCmdsByNode(cmdsMap *cmdsMap, cmds []Cmder) error {
 
 	if c.opt.ReadOnly && c.cmdsAreReadOnly(cmds) {
 		for _, cmd := range cmds {
-			slot := c.cmdSlot(cmd)
-			node, err := c.slotReadOnlyNode(state, slot)
-			if err != nil {
-				return err
+			if node == nil {
+				slot := c.cmdSlot(cmd)
+				node, err = c.slotReadOnlyNode(state, slot)
+				if err != nil {
+					return err
+				}
 			}
 			cmdsMap.Add(node, cmd)
 		}
@@ -1117,10 +1121,12 @@ func (c *ClusterClient) mapCmdsByNode(cmdsMap *cmdsMap, cmds []Cmder) error {
 	}
 
 	for _, cmd := range cmds {
-		slot := c.cmdSlot(cmd)
-		node, err := state.slotMasterNode(slot)
-		if err != nil {
-			return err
+		if node == nil {
+			slot := c.cmdSlot(cmd)
+			node, err = state.slotMasterNode(slot)
+			if err != nil {
+				return err
+			}
 		}
 		cmdsMap.Add(node, cmd)
 	}
